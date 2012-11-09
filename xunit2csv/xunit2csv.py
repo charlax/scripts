@@ -1,12 +1,14 @@
 #!/usr/bin/python
 
 """
-Extract test name and time from xunit output.
+Extract test name and time from xunit output generated with nosetest
+`--with-xunit` option.
 """
 
 import argparse
 import csv
 import xml.etree.ElementTree as etree
+
 
 def main(args):
     tree = etree.parse(args.input[0])
@@ -26,7 +28,7 @@ def main(args):
 
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description="Convert xunit file to csv.")
+    parser = argparse.ArgumentParser(description="Convert xunit file to CSV.")
     parser.add_argument("input", nargs=1, help="xunit file")
     parser.add_argument("output", nargs=1, help="csv file")
     args = parser.parse_args()
