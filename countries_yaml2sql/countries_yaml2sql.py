@@ -9,13 +9,14 @@ import re
 import csv
 import argparse
 from datetime import datetime
+from collections import defaultdict
 
 import json
 import yaml
 
 
 # This file is used to get countries that should be inserted
-COUNTRIES_TO_UPDATE_FILENAME = "existing_countries.csv"
+COUNTRIES_TO_UPDATE_FILENAME = "existing_countries.secret.csv"
 SQL_TEMPLATE_INSERT = "INSERT INTO country (label, iso2, iso3, currency_code, telephone_code, telephone_international_prefix, telephone_national_prefix, distance_unit, name, created_at, updated_at) VALUES ({label}, {alpha2}, {alpha3}, {currency}, {country_code}, {international_prefix}, {national_prefix}, 'km', {name_json}, {now}, {now});"
 SQL_TEMPLATE_UPDATE = "UPDATE country SET telephone_international_prefix={international_prefix}, telephone_national_prefix={national_prefix}, updated_at={now} WHERE id={id_};"
 
@@ -58,7 +59,11 @@ def main(args):
 
     now = datetime.utcnow().replace(microsecond=0)
     sql = {"insert": [], "update": []}
+    missing = defaultdict(list)
     for alpha2, country in content.items():
+        if not country.get("currency"):
+            missing["currency"].append(alpha2)
+
         env = country
         env["now"] = now
         env["label"] = labelize(country["name"])
@@ -74,7 +79,16 @@ def main(args):
 
     sql = "\n".join(sql["insert"] + sql["update"])
 
-    if not args.output_filename:
+    if args.only_show_missing:
+        print "Missing values:"
+
+        if not missing:
+            print "None"
+
+        for k, v in missing.items():
+            print "\t%s: %s" % (k, ", ".join(v))
+
+    elif not args.output_filename:
         print sql
 
     else:
@@ -84,6 +98,8 @@ def main(args):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="Convert countries yaml file to SQL.")
+    parser.add_argument("--only-show-missing", action="store_true",
+            help="Only show missing values")
     parser.add_argument("input_filename", nargs="?", help="yaml file",
             default="countries.yaml")
     parser.add_argument("output_filename", nargs="?", help="SQL file")
